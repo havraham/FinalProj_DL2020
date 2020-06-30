@@ -91,9 +91,9 @@ if __name__ == "__main__":
 
     CATEGORIES = ['not_periodic','periodic']
 
-    print(len(label_table))
-    print(len(period_label))
-    print(len(tracks_name_number))
+    # print(len(label_table))
+    # print(len(period_label))
+    # print(len(tracks_name_number))
 
 
     cwd = os.getcwd()
