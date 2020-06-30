@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
@@ -9,13 +11,13 @@ from PIL import Image
 import glob
 
 def read_tracks_cropped():
+
     for filename in glob.glob('CSFID/tracks_cropped/*.jpg'):  # assuming jpg
         file_key = int(filename.split('\\')[-1].split('.')[0])
         file_class = period_label[file_key]
 
         # print(filename)
         # print('key', file_key, 'class:', period_label[file_key])
-
         if file_class == 0:
             shutil.copy(filename, not_periodic_dst)
         else:
@@ -33,7 +35,7 @@ def read_original_tracks():
             print(file_key)
             print(tmp[file_key])
             img_key = int(tmp[file_key].split('.')[0])
-            # print('key', img_key, 'class:', period_label[img_key])
+            print('key', img_key, 'class:', period_label[img_key])
             file_class = period_label[img_key]
             if file_class == 0:
                 shutil.copy(filename, not_periodic_dst)
@@ -50,20 +52,33 @@ def read_original_tracks():
 
 def read_from_references():
     tmp = label_table
-    ref = 'CSFID/references/'
-    for k,v in tmp.items():
-        # print(k,v)
-        src = ref + "*" + str(v) + '.png'
-        # print(src)
-        filename = glob.glob(src)[0]
-        # print(filename)
-        # print('key', k, 'class:', period_label[k])
-        file_class = period_label[k]
-        if file_class == 0:
-            shutil.copy(filename, not_periodic_dst)
-        else:
-            shutil.copy(filename, periodic_dst)
+    for filename in glob.glob('CSFID/references/*.png'):  # assuming jpg
+        file_key = str(filename.split('\\')[-1])
+        img_name = int(file_key.split('.')[0])
+        if img_name in tmp.values():
+            img_key = get_key(tmp,img_name)
+            print(img_name,img_key)
+            now = datetime.now().strftime("%f")
+            try:
+                print('key', img_key, 'class:', period_label[img_key])
+                file_class = period_label[img_key]
+                if file_class == 0:
+                    shutil.copy(filename, not_periodic_dst+str(now)+".png")
+                else:
+                    shutil.copy(filename, periodic_dst+str(now)+".png")
 
+
+            except:
+                print("erreer", filename)
+                print(tmp)
+
+# function to return key for any value
+def get_key(my_dict, val):
+    for key, value in my_dict.items():
+        if val == value:
+            return key
+
+    return "key doesn't exist"
 
 if __name__ == "__main__":
     label_table = pd.read_csv('./CSFID/label_table.csv')
@@ -76,9 +91,9 @@ if __name__ == "__main__":
 
     CATEGORIES = ['not_periodic','periodic']
 
-    print(label_table)
-    print(period_label)
-    print(tracks_name_number)
+    print(len(label_table))
+    print(len(period_label))
+    print(len(tracks_name_number))
 
 
     cwd = os.getcwd()
@@ -95,6 +110,7 @@ if __name__ == "__main__":
         # Create sub-folders.
         for sub in CATEGORIES:
             os.mkdir(os.path.join(cwd, "data", sub))
+
 
     read_tracks_cropped()
     read_original_tracks()
