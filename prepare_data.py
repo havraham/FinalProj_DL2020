@@ -13,15 +13,15 @@ import glob
 def read_tracks_cropped():
 
     for filename in glob.glob('CSFID/tracks_cropped/*.jpg'):  # assuming jpg
-        file_key = int(filename.split('\\')[-1].split('.')[0])
+        file_key = int(filename.split('/')[-1].split('.')[0])
         file_class = period_label[file_key]
 
         # print(filename)
         # print('key', file_key, 'class:', period_label[file_key])
         if file_class == 0:
-            shutil.copy(filename, not_periodic_dst)
+            shutil.copy(filename, test_not_periodic_dst)
         else:
-            shutil.copy(filename, periodic_dst)
+            shutil.copy(filename, test_periodic_dst)
 
 
 def read_original_tracks():
@@ -29,7 +29,7 @@ def read_original_tracks():
     # print(tmp)
 
     for filename in glob.glob('CSFID/tracks_original/*.jpg'):  # assuming jpg
-        file_key = str(filename.split('\\')[-1])
+        file_key = str(filename.split('/')[-1])
         # file_class = tracks_name_number[file_key]
         try:
             print(file_key)
@@ -63,9 +63,9 @@ def read_from_references():
                 print('key', img_key, 'class:', period_label[img_key])
                 file_class = period_label[img_key]
                 if file_class == 0:
-                    shutil.copy(filename, not_periodic_dst+str(now)+".png")
+                    shutil.copy(filename, train_not_periodic_dst+str(now)+".png")
                 else:
-                    shutil.copy(filename, periodic_dst+str(now)+".png")
+                    shutil.copy(filename, train_periodic_dst+str(now)+".png")
 
 
             except:
@@ -103,7 +103,14 @@ if __name__ == "__main__":
     periodic_dst = cwd + "/data/periodic/"
     not_periodic_dst = cwd + "/data/not_periodic/"
     print(dst)
+    train_dst = dst + 'train/'
+    test_dst = dst + 'test/'
 
+    train_periodic_dst = train_dst + "periodic/"
+    train_not_periodic_dst = train_dst + "not_periodic/"
+
+    test_periodic_dst = test_dst + "periodic/"
+    test_not_periodic_dst = test_dst + "not_periodic/"
     if not os.path.exists(dst):
         os.makedirs(dst)
 
