@@ -53,7 +53,7 @@ def read_original_tracks():
 def read_from_references():
     tmp = label_table
     for filename in glob.glob('CSFID/references/*.png'):  # assuming jpg
-        file_key = str(filename.split('\\')[-1])
+        file_key = str(filename.split('/')[-1])
         img_name = int(file_key.split('.')[0])
         if img_name in tmp.values():
             img_key = get_key(tmp,img_name)
@@ -112,6 +112,6 @@ if __name__ == "__main__":
             os.mkdir(os.path.join(cwd, "data", sub))
 
 
-    read_tracks_cropped()
-    read_original_tracks()
+    # read_tracks_cropped()
+    # read_original_tracks()
     read_from_references()
