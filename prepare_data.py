@@ -13,7 +13,7 @@ import glob
 def read_tracks_cropped():
 
     for filename in glob.glob('CSFID/tracks_cropped/*.jpg'):  # assuming jpg
-        file_key = int(filename.split('/')[-1].split('.')[0])
+        file_key = int(filename.split('\\')[-1].split('.')[0])
         file_class = period_label[file_key]
 
         # print(filename)
@@ -29,7 +29,7 @@ def read_original_tracks():
     # print(tmp)
 
     for filename in glob.glob('CSFID/tracks_original/*.jpg'):  # assuming jpg
-        file_key = str(filename.split('/')[-1])
+        file_key = str(filename.split('\\')[-1])
         # file_class = tracks_name_number[file_key]
         try:
             print(file_key)
@@ -38,9 +38,9 @@ def read_original_tracks():
             print('key', img_key, 'class:', period_label[img_key])
             file_class = period_label[img_key]
             if file_class == 0:
-                shutil.copy(filename, not_periodic_dst)
+                shutil.copy(filename, test_not_periodic_dst)
             else:
-                shutil.copy(filename, periodic_dst)
+                shutil.copy(filename, test_periodic_dst)
 
             del(tmp[file_key])
 
@@ -53,7 +53,7 @@ def read_original_tracks():
 def read_from_references():
     tmp = label_table
     for filename in glob.glob('CSFID/references/*.png'):  # assuming jpg
-        file_key = str(filename.split('/')[-1])
+        file_key = str(filename.split('\\')[-1])
         img_name = int(file_key.split('.')[0])
         if img_name in tmp.values():
             img_key = get_key(tmp,img_name)
@@ -97,6 +97,7 @@ if __name__ == "__main__":
 
 
     cwd = os.getcwd()
+    print(cwd)
     src = "./CSFID/tracks_cropped"
 
     dst = cwd + "/data/"
@@ -119,6 +120,6 @@ if __name__ == "__main__":
             os.mkdir(os.path.join(cwd, "data", sub))
 
 
-    # read_tracks_cropped()
+    read_tracks_cropped()
     # read_original_tracks()
     read_from_references()
