@@ -15,13 +15,13 @@ from trains import Task
 
 
 if __name__ == '__main__':
-    # task = Task.init(project_name="ct_mri_classification", task_name="ct_mri_classification")
+    task = Task.init(project_name="Shoe_prints", task_name="periodic_patterns")
 
-    DATADIR = os.getcwd() + '/data/'
-    IMG_SHAPE = (200, 186, 3)
+    DATADIR = os.getcwd() + '/fixing_data/'
+    IMG_SHAPE = (290, 105, 3)
 
 
-    batch_size = 10
+    batch_size = 1
     seed = 1
 
     train_datagen = ImageDataGenerator(
@@ -34,7 +34,7 @@ if __name__ == '__main__':
         height_shift_range=0.0,
         brightness_range=(1,1),
         shear_range=0.0,
-        zoom_range=0.0,
+        zoom_range=0.5,
         channel_shift_range=0.0,
         fill_mode="nearest",
         cval=0.0,
@@ -43,34 +43,35 @@ if __name__ == '__main__':
         preprocessing_function=None,
         data_format=None,
         dtype=None,
+        validation_split=0.2,
         rescale=1. / 255,
        )
 
     test_datagen = ImageDataGenerator(rescale=1. / 255)
     train_generator = train_datagen.flow_from_directory(
-        DATADIR + 'train/',
-        target_size=(200, 186),
+        DATADIR ,
+        target_size=(290, 105),
         batch_size=batch_size,
         class_mode='sparse',
-        # subset='training',
-        # shuffle=True,
-        save_to_dir=DATADIR+'preview/',
+        subset='training',
+        shuffle=True,
+        save_to_dir=os.getcwd() + '/preview/',
         seed=seed)
 
-    # validation_generator = train_datagen.flow_from_directory(
-    #     DATADIR ,
-    #     target_size=(224, 224),
-    #     batch_size=batch_size,
-    #     class_mode='sparse',
-    #     subset='validation',
-    #     seed= seed )
-
-    test_generator = test_datagen.flow_from_directory(
-        DATADIR + 'test/',
-        target_size=(200, 186),
+    validation_generator = train_datagen.flow_from_directory(
+        DATADIR ,
+        target_size=(290, 105),
         batch_size=batch_size,
         class_mode='sparse',
-    )
+        subset='validation',
+        seed= seed )
+    #
+    # test_generator = test_datagen.flow_from_directory(
+    #     DATADIR + 'test/',
+    #     target_size=(290, 105),
+    #     batch_size=batch_size,
+    #     class_mode='sparse',
+    # )
 
 
     # Create the base model from the pre-trained model MobileNet V2
@@ -90,13 +91,18 @@ if __name__ == '__main__':
     feature_batch_average = global_average_layer(feature_batch)
     print(feature_batch_average.shape)
 
+    dropout_layer = tf.keras.layers.Dropout(0.3)
+    dropout_batch = dropout_layer(feature_batch)
+    print(dropout_batch.shape)
+
     prediction_layer = tf.keras.layers.Dense(2, activation='softmax')
-    prediction_batch = prediction_layer(feature_batch_average)
+    prediction_batch = prediction_layer(dropout_batch)
     print(prediction_batch.shape)
 
     model = tf.keras.Sequential([
         base_model,
         global_average_layer,
+        dropout_layer,
         prediction_layer
     ])
 
@@ -107,18 +113,19 @@ if __name__ == '__main__':
 
     model.summary()
 
+    print("==========model evaluate==========")
+    model.evaluate(validation_generator)
     # train_datagen.fit(train_generator)
     # test_datagen.fit(test_generator)
     history = model.fit(
         train_generator,
         steps_per_epoch=train_generator.samples // batch_size,
-        epochs=300,
-        validation_data=test_generator,
-        validation_steps=test_generator.samples // batch_size
+        epochs=20,
+        validation_data=validation_generator,
+        validation_steps=validation_generator.samples // batch_size
         )
 
-    # print("==========model evaluate==========")
-    # model.evaluate(test_generator)
+
     acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
 
@@ -143,7 +150,11 @@ if __name__ == '__main__':
     plt.title('Training and Validation Loss')
     plt.xlabel('epoch')
     plt.show()
-    #
+
+
+    print("==========model evaluate==========")
+    model.evaluate(validation_generator)
+
     # # fine tuning
     # base_model.trainable = True
     # LAYERS_TO_FREEZE = 100

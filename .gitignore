@@ -1,3 +1,6 @@
 venv/
 .idea/
 data/
+preview/
+CSFID/
+fixing_data/
