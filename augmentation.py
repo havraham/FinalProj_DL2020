@@ -21,57 +21,44 @@ if __name__ == '__main__':
     IMG_SHAPE = (290, 105, 3)
 
 
-    batch_size = 1
+    batch_size = 10
     seed = 1
 
     train_datagen = ImageDataGenerator(
-        featurewise_center=False,
-        samplewise_center=False,
-        featurewise_std_normalization=False,
-        samplewise_std_normalization=False,
-        zca_whitening=False,
         width_shift_range=0.0,
         height_shift_range=0.0,
-        brightness_range=(1,1),
-        shear_range=0.0,
-        zoom_range=0.5,
-        channel_shift_range=0.0,
-        fill_mode="nearest",
-        cval=0.0,
-        horizontal_flip=False,
-        vertical_flip=False,
-        preprocessing_function=None,
-        data_format=None,
-        dtype=None,
-        validation_split=0.2,
+        zoom_range=0.8,
+        brightness_range=[0.2, 1.0],
+        fill_mode='nearest',
         rescale=1. / 255,
+        validation_split=0.0,
        )
 
     test_datagen = ImageDataGenerator(rescale=1. / 255)
     train_generator = train_datagen.flow_from_directory(
-        DATADIR ,
+        DATADIR +'train/' ,
         target_size=(290, 105),
         batch_size=batch_size,
-        class_mode='sparse',
+        class_mode='binary',
         subset='training',
         shuffle=True,
         save_to_dir=os.getcwd() + '/preview/',
         seed=seed)
 
     validation_generator = train_datagen.flow_from_directory(
-        DATADIR ,
+        DATADIR +'train/',
         target_size=(290, 105),
         batch_size=batch_size,
-        class_mode='sparse',
+        class_mode='binary',
         subset='validation',
         seed= seed )
-    #
-    # test_generator = test_datagen.flow_from_directory(
-    #     DATADIR + 'test/',
-    #     target_size=(290, 105),
-    #     batch_size=batch_size,
-    #     class_mode='sparse',
-    # )
+
+    test_generator = test_datagen.flow_from_directory(
+        DATADIR + 'test/',
+        target_size=(290, 105),
+        batch_size=batch_size,
+        class_mode='binary',
+    )
 
 
     # Create the base model from the pre-trained model MobileNet V2
@@ -95,7 +82,7 @@ if __name__ == '__main__':
     dropout_batch = dropout_layer(feature_batch)
     print(dropout_batch.shape)
 
-    prediction_layer = tf.keras.layers.Dense(2, activation='softmax')
+    prediction_layer = tf.keras.layers.Dense(1, activation='sigmoid')
     prediction_batch = prediction_layer(dropout_batch)
     print(prediction_batch.shape)
 
@@ -107,24 +94,26 @@ if __name__ == '__main__':
     ])
 
     base_learning_rate = 0.001
-    model.compile(optimizer=tf.keras.optimizers.RMSprop(lr=base_learning_rate),
-                  loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+    model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
+                  loss='mse',
                   metrics=['accuracy'])
 
     model.summary()
 
     print("==========model evaluate==========")
-    model.evaluate(validation_generator)
+    model.evaluate(test_generator)
     # train_datagen.fit(train_generator)
     # test_datagen.fit(test_generator)
     history = model.fit(
         train_generator,
         steps_per_epoch=train_generator.samples // batch_size,
-        epochs=20,
-        validation_data=validation_generator,
-        validation_steps=validation_generator.samples // batch_size
-        )
+        epochs=100,
+        validation_data=test_generator,
+        validation_steps=test_generator.samples // batch_size,
+    )
 
+    print("==========model evaluate==========")
+    model.evaluate(test_generator)
 
     acc = history.history['accuracy']
     val_acc = history.history['val_accuracy']
@@ -137,7 +126,7 @@ if __name__ == '__main__':
     plt.plot(acc, label='Training Accuracy')
     plt.plot(val_acc, label='Validation Accuracy')
     plt.legend(loc='lower right')
-    plt.ylabel('Accuracy')
+    plt.ylabel('Recall')
     plt.ylim([min(plt.ylim()), 1])
     plt.title('Training and Validation Accuracy')
 
@@ -145,15 +134,15 @@ if __name__ == '__main__':
     plt.plot(loss, label='Training Loss')
     plt.plot(val_loss, label='Validation Loss')
     plt.legend(loc='upper right')
-    plt.ylabel('Cross Entropy')
+    plt.ylabel('MSE')
     plt.ylim([0, 1.0])
     plt.title('Training and Validation Loss')
     plt.xlabel('epoch')
     plt.show()
 
-
-    print("==========model evaluate==========")
-    model.evaluate(validation_generator)
+    #
+    # print("==========model evaluate==========")
+    # model.evaluate(validation_generator)
 
     # # fine tuning
     # base_model.trainable = True
