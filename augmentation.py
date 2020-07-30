@@ -10,9 +10,14 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 import  matplotlib.pyplot as plt
 from trains import Task
 
-
-
-
+def add_noise(img):
+    '''Add random noise to an image'''
+    VARIABILITY = 50
+    deviation = VARIABILITY*random.random()
+    noise = np.random.normal(0, deviation, img.shape)
+    img += noise
+    np.clip(img, 0., 255.)
+    return img
 
 if __name__ == '__main__':
     task = Task.init(project_name="Shoe_prints", task_name="periodic_patterns")
@@ -21,22 +26,23 @@ if __name__ == '__main__':
     IMG_SHAPE = (290, 105, 3)
 
 
-    batch_size = 10
+    batch_size = 32
     seed = 1
 
     train_datagen = ImageDataGenerator(
-        width_shift_range=0.0,
-        height_shift_range=0.0,
+        width_shift_range=0.1,
+        height_shift_range=0.8,
+        brightness_range=[0.2,1],
         zoom_range=0.8,
-        brightness_range=[0.2, 1.0],
         fill_mode='nearest',
         rescale=1. / 255,
-        validation_split=0.0,
+        validation_split=0.2,
+        preprocessing_function=add_noise
        )
 
     test_datagen = ImageDataGenerator(rescale=1. / 255)
     train_generator = train_datagen.flow_from_directory(
-        DATADIR +'train/' ,
+        DATADIR + 'train/',
         target_size=(290, 105),
         batch_size=batch_size,
         class_mode='binary',
@@ -46,12 +52,12 @@ if __name__ == '__main__':
         seed=seed)
 
     validation_generator = train_datagen.flow_from_directory(
-        DATADIR +'train/',
+        DATADIR + 'train/',
         target_size=(290, 105),
         batch_size=batch_size,
         class_mode='binary',
         subset='validation',
-        seed= seed )
+        seed=seed)
 
     test_generator = test_datagen.flow_from_directory(
         DATADIR + 'test/',
@@ -59,7 +65,6 @@ if __name__ == '__main__':
         batch_size=batch_size,
         class_mode='binary',
     )
-
 
     # Create the base model from the pre-trained model MobileNet V2
     base_model = tf.keras.applications.ResNet101V2(input_shape=IMG_SHAPE,
@@ -71,31 +76,30 @@ if __name__ == '__main__':
 
     # base_model.summary()
 
-
     base_model.trainable = False
 
-    global_average_layer = tf.keras.layers.GlobalAveragePooling2D()
+    global_average_layer = tf.keras.layers.Flatten()
     feature_batch_average = global_average_layer(feature_batch)
     print(feature_batch_average.shape)
 
-    dropout_layer = tf.keras.layers.Dropout(0.3)
-    dropout_batch = dropout_layer(feature_batch)
-    print(dropout_batch.shape)
+    # dropout_layer = tf.keras.layers.Dropout(0.5)
+    # dropout_batch = dropout_layer(feature_batch)
+    # print(dropout_batch.shape)
 
     prediction_layer = tf.keras.layers.Dense(1, activation='sigmoid')
-    prediction_batch = prediction_layer(dropout_batch)
+    prediction_batch = prediction_layer(feature_batch_average)
     print(prediction_batch.shape)
 
     model = tf.keras.Sequential([
         base_model,
         global_average_layer,
-        dropout_layer,
+        # dropout_layer,
         prediction_layer
     ])
 
     base_learning_rate = 0.001
-    model.compile(optimizer=tf.keras.optimizers.Adam(lr=base_learning_rate),
-                  loss='mse',
+    model.compile(optimizer=tf.keras.optimizers.RMSprop(lr=base_learning_rate),
+                  loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
                   metrics=['accuracy'])
 
     model.summary()
@@ -107,11 +111,13 @@ if __name__ == '__main__':
     history = model.fit(
         train_generator,
         steps_per_epoch=train_generator.samples // batch_size,
-        epochs=100,
+        epochs=10,
         validation_data=test_generator,
         validation_steps=test_generator.samples // batch_size,
+        shuffle=True
     )
 
+    model.fit()
     print("==========model evaluate==========")
     model.evaluate(test_generator)
 
@@ -139,67 +145,3 @@ if __name__ == '__main__':
     plt.title('Training and Validation Loss')
     plt.xlabel('epoch')
     plt.show()
-
-    #
-    # print("==========model evaluate==========")
-    # model.evaluate(validation_generator)
-
-    # # fine tuning
-    # base_model.trainable = True
-    # LAYERS_TO_FREEZE = 100
-    # for layer in base_model.layers[:LAYERS_TO_FREEZE]:
-    #     layer.trainable = False
-    #
-    # for layer in base_model.layers[LAYERS_TO_FREEZE:]:
-    #     layer.trainable = True
-    #
-    # # new model compile with new trainable layers
-    # base_learning_rate = 0.001
-    # model.compile(optimizer=tf.keras.optimizers.RMSprop(lr=base_learning_rate),
-    #               loss=tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-    #               metrics=['accuracy'])
-    #
-    # ft_history = model.fit(
-    #     train_generator,
-    #     steps_per_epoch=train_generator.samples // batch_size,
-    #     epochs=100,
-    #     validation_data=validation_generator,
-    #     validation_steps=validation_generator.samples // batch_size)
-    #
-    # acc = ft_history.history['accuracy']
-    # val_acc = ft_history.history['val_accuracy']
-    #
-    # loss = ft_history.history['loss']
-    # val_loss = ft_history.history['val_loss']
-    #
-    # plt.figure(figsize=(8, 8))
-    # plt.subplot(2, 1, 1)
-    # plt.plot(acc, label='Training Accuracy')
-    # plt.plot(val_acc, label='Validation Accuracy')
-    # plt.legend(loc='lower right')
-    # plt.ylabel('Accuracy')
-    # plt.ylim([min(plt.ylim()), 1])
-    # plt.title('Training and Validation Accuracy')
-    #
-    # plt.subplot(2, 1, 2)
-    # plt.plot(loss, label='Training Loss')
-    # plt.plot(val_loss, label='Validation Loss')
-    # plt.legend(loc='upper right')
-    # plt.ylabel('Cross Entropy')
-    # plt.ylim([0, 1.0])
-    # plt.title('Training and Validation Loss')
-    # plt.xlabel('epoch')
-    # plt.show()
-    #
-    # from sklearn.metrics import classification_report, confusion_matrix
-    #
-    # # Confution Matrix and Classification Report
-    # Y_pred = model.predict(validation_generator, validation_generator.samples // batch_size)
-    # y_pred = np.argmax(Y_pred, axis=1)
-    # print('Confusion Matrix')
-    # print(confusion_matrix(validation_generator.classes, y_pred))
-    # print('Classification Report')
-    #
-    # # print(classification_report(validation_generator.classes, y_pred, target_names=test_labels))
-    # print("==========evaluate after FT==========")
-    # # model.evaluate(test_generator)
